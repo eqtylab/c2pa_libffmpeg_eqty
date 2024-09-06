@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  ffmpeg-container:
+    build: .
+    container_name: ffmpeg_container
+    stdin_open: true   # Keep stdin open for interaction
+    tty: true          # Allocate a pseudo-TTY for the bash shell
+    volumes:
+      - ./data:/data   
