@@ -1,22 +1,21 @@
 # Using docker
 
-1) build docker
+1) Build docker
 ```
 docker compose build
 ```
 
-2) start docker
+2) Start docker
 ```
 docker compose up -d
 ```
-3) enter docker
+3) Enter docker shel
 ```
 docker compose exec ffmpeg-container /bin/bash
 ```
+4) Test signing of DASH
 
-4) Test run DASH
-
-Note: Need to output it into /tmp since there is a cross-disk bug, see issues/1
+Note: Need to output it into `/tmp` since there is a cross-disk bug, see `issues/1`
 ```
 mkdir /tmp/test-out 
 ffmpeg -i /data/sample-5.mp4 \
@@ -29,7 +28,7 @@ mv /tmp/test-out /out
 ``````
 
 5) Test run MP4
-Note: Need to output it into /tmp since there is a cross-disk bug, see issues/1
+Note: Need to output it into `/tmp` since there is a cross-disk bug, see `issues/1`
 ```
 mkdir /tmp/test-out-mp4
 ffmpeg -i /data/sample-5.mp4 \

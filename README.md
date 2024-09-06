@@ -1,12 +1,12 @@
 # libffmpeg_eqty_c2pa.so
 
-Library that wraps the C2PA rust library for PoC ffmpeg-c2pa branch. 
+Library that wraps the C2PA rust library for PoC ffmpeg/c2pa branch. 
 
 ## Installation
 
-### Step1 - Rust library
+### Step 1 - build rust library
 
-0) git clone
+0) Clone git repository
 ```
 git clone https://github.com/eqtylab/c2pa_libffmpeg_eqty/
 cd c2pa_libffmpeg_eqty
@@ -15,19 +15,19 @@ cd c2pa_libffmpeg_eqty
 ```
 cargo build --release
 ```
-2) Place the resuting file into the library path
+2) Place the resulting file into the library path
 ```
 sudo cp target/release/libffmpeg_eqty_c2pa.so /lib
 ```
 
 ### Step2 Build FFMPEG
-0) git clone
+0) Clone git repository
 ```
 git clone https://github.com/eqtylab/c2pa_ffmpeg
 cd c2pa_ffmpeg
 git checkout c2pa
 ```
-1) install build dependencies
+1) Install build dependencies
 ```
 sudo apt install -y \
     autoconf \
@@ -57,7 +57,7 @@ sudo apt install -y \
     libx264-dev \
     libx265-dev
 ```
-2) configure and build ffmpeg
+2) Configure and build ffmpeg
 ```
 ./configure \
   --enable-gpl \
