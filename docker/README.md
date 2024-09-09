@@ -9,7 +9,7 @@ docker compose build
 ```
 docker compose up -d
 ```
-3) Enter docker shel
+3) Enter docker shell
 ```
 docker compose exec ffmpeg-container /bin/bash
 ```

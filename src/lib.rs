@@ -8,7 +8,15 @@ use std::io;
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::path::Path;
-use std::os::unix::fs::MetadataExt; // Provides the `dev()` method for Unix-like systems
+use std::env;
+use uuid::Uuid;
+
+#[cfg(unix)]
+use std::os::unix::fs::MetadataExt;
+
+#[cfg(windows)]
+use std::os::windows::fs::MetadataExt;
+
 mod mpd_parse;
 
 
@@ -17,8 +25,17 @@ fn is_same_filesystem(old_path: &Path, new_path: &Path) -> io::Result<bool> {
     let old_metadata = fs::metadata(old_path)?;
     let new_metadata = fs::metadata(new_path.parent().unwrap_or(new_path))?;
 
-    // Check if the device IDs (filesystem) are the same
-    Ok(old_metadata.dev() == new_metadata.dev())
+    #[cfg(unix)]
+    {
+        // Compare device IDs on Unix systems
+        Ok(old_metadata.dev() == new_metadata.dev())
+    }
+
+    #[cfg(windows)]
+    {
+        // On Windows, you can compare the volume serial number instead
+        Ok(old_metadata.volume_serial_number() == new_metadata.volume_serial_number())
+    }
 }
 
 fn move_file(old_path: &Path, new_path: &Path) -> io::Result<()> {
@@ -154,8 +171,15 @@ pub extern "C" fn c2pa_sign(
         // Parse MPD file
         let results = mpd_parse::parse_mpd(input_file).expect ("ERROR");
 
-        let temporary_output_path: &str="/tmp/out";
-        
+//        let temporary_output_path: &str="/tmp/out";
+        let mut temporary_output_path: PathBuf = env::temp_dir();
+        let unique_path = format!("ffmpeg_c2pa-{}", Uuid::new_v4());
+        temporary_output_path.push(unique_path);
+        if !temporary_output_path.exists() {
+            fs::create_dir_all(&temporary_output_path).expect("ERROR");
+        }
+
+
         // Loop through streams
         for (initial_segment, fragments) in results {
             println!("Initialization Segment: {}", initial_segment);
@@ -201,13 +225,31 @@ pub extern "C" fn c2pa_sign(
                 eprintln!("Failed to move file: {}", e);
             } 
 
+            if temporary_output_path.exists() {
+                fs::remove_dir_all(&temporary_output_path).expect("Failed to delete directory");
+            }
+
         }
     } else {
-        let temp_file_name="/tmp/test.mp4";
+        let mut temporary_output_path: PathBuf = env::temp_dir();
+        let unique_path = format!("ffmpeg_c2pa-{}.mp4", Uuid::new_v4());
+        temporary_output_path.push(unique_path);
+
+        // Convert PathBuf to &str
+        let temp_file_name: &str =  temporary_output_path.to_str().expect("ERROR");
+        /*  {
+            Some(path_str) => path_str,
+            None => {
+                eprintln!("Failed to convert path to string.");
+                return Err("");
+            },
+        };*/
+
+        //let temp_file_name="/tmp/test.mp4";
 
         manifest
         .embed(&input_file, &temp_file_name, signer.as_ref()).expect("error");
-        move_file(&temp_file_name.as_ref(), output_file.as_ref()).expect("error");
+        move_file(&temporary_output_path.as_ref(), output_file.as_ref()).expect("error");
     }
 
 }
