@@ -3,17 +3,35 @@ use c2pa::{create_signer, SigningAlg, Manifest};
 use serde_json::{json, Value};
 use std::ffi::{CStr};
 use std::os::raw::c_char;
+use std::io;
 //use tempfile::NamedTempFile;
 use serde::Deserialize;
-use quick_xml::de::from_str;
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::path::Path;
-use std::fs::File;
-use std::io::Read;
-
+use std::os::unix::fs::MetadataExt; // Provides the `dev()` method for Unix-like systems
 mod mpd_parse;
 
+
+fn is_same_filesystem(old_path: &Path, new_path: &Path) -> io::Result<bool> {
+    // Get the device ID of both paths using `metadata`
+    let old_metadata = fs::metadata(old_path)?;
+    let new_metadata = fs::metadata(new_path.parent().unwrap_or(new_path))?;
+
+    // Check if the device IDs (filesystem) are the same
+    Ok(old_metadata.dev() == new_metadata.dev())
+}
+
+fn move_file(old_path: &Path, new_path: &Path) -> io::Result<()> {
+    // Try to rename if on the same filesystem
+    if is_same_filesystem(old_path, new_path)? {
+        fs::rename(old_path, new_path)
+    } else {
+        // Otherwise, copy and remove the original file
+        fs::copy(old_path, new_path)?;
+        fs::remove_file(old_path)?;
+        Ok(())
+    }
+}
 
 //Helper Functions
 fn get_file_name(path: &str) -> Option<String> {
@@ -171,7 +189,7 @@ pub extern "C" fn c2pa_sign(
                 let new_path = Path::new(&base_path).join(&fragment);
                 println!("moving from {} to {}", old_path.display(), new_path.display());
 
-                if let Err(e) = fs::rename(&old_path, &new_path) {
+                if let Err(e) = move_file(old_path.as_ref(), &new_path.as_ref()) {
                     eprintln!("Failed to move file: {}", e);
                 }
             }
@@ -179,7 +197,7 @@ pub extern "C" fn c2pa_sign(
             let new_path_init = Path::new(&base_path).join(&initial_segment);
             println!("moving from {} to {}", old_path_init.display(), new_path_init.display());
 
-            if let Err(e) = fs::rename(&old_path_init, &new_path_init) {
+            if let Err(e) = move_file(old_path_init.as_ref(), &new_path_init.as_ref()) {
                 eprintln!("Failed to move file: {}", e);
             } 
 
@@ -189,7 +207,7 @@ pub extern "C" fn c2pa_sign(
 
         manifest
         .embed(&input_file, &temp_file_name, signer.as_ref()).expect("error");
-        fs::rename(&temp_file_name, output_file).expect("error");
+        move_file(&temp_file_name.as_ref(), output_file.as_ref()).expect("error");
     }
 
 }
